@@ -1,0 +1,2 @@
+# CSharpConsoleGame
+Game content repository
