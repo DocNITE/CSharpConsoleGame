@@ -21,7 +21,7 @@ public class World {
         }
 
         Cam = new Camera();
-        Cam.Position = new Point(Size.X/2, Size.Y/2);
+        Cam.Position = new Point((Size.X*Resource.TileSize.X)/2, (Size.Y*Resource.TileSize.Y)/2);
     }
 
     private Tile? MakeTile(Point pos) {
@@ -70,18 +70,25 @@ public class World {
 
     public void Draw() {
         var localSize = GetCamDimension();
+        var physicalSize = new Point(localSize.X*Resource.TileSize.X, localSize.Y*Resource.TileSize.Y);
+        float localCamPosX = Cam.Position.X/Resource.TileSize.X;
+        float localCamPosY = Cam.Position.Y/Resource.TileSize.Y;
         var startPos = new Point(
-            Math.Clamp(Cam.Position.X - (localSize.X/2), localSize.X, (this.Size.X-1)-(localSize.X)), 
-            Math.Clamp(Cam.Position.Y - (localSize.Y/2), localSize.Y, (this.Size.Y-1)-(localSize.Y))
+            Math.Clamp((int)Math.Floor(localCamPosX) - (localSize.X/2), localSize.X, (this.Size.X-1)-(localSize.X)) - 1, 
+            Math.Clamp((int)Math.Floor(localCamPosY) - (localSize.Y/2), localSize.Y, (this.Size.Y-1)-(localSize.Y)) - 1
         );
 
-        for (int x = 0; x < localSize.X; x+=1) {
-            for (int y = 0; y < localSize.Y; y+=1) {
-                var tile = GetTile(new Point(startPos.X+x, startPos.Y+y));
-                if (tile == null) 
+        for (int x = 0; x < localSize.X+2; x+=1) {
+            for (int y = 0; y < localSize.Y+1; y+=1) {
+                var pos = new Point(startPos.X+x, startPos.Y+y);
+                var tile = GetTile(pos);
+                if (tile == null) {
                     continue;
+                }
 
-                Screen.SetTexture(y*Resource.TileSize.Y, x*Resource.TileSize.X, tile.Sprite);
+                var minPhysicalPos = new Point((Cam.Position.X-(Screen.WindowSize.X/2)), (Cam.Position.Y-(Screen.WindowSize.Y/2)));
+                Screen.SetText(10,10,minPhysicalPos.X.ToString());
+                Screen.SetTexture(((pos.Y)*Resource.TileSize.Y)-minPhysicalPos.Y, ((pos.X)*Resource.TileSize.X)-minPhysicalPos.X, tile.Sprite);
             }
         }
 
