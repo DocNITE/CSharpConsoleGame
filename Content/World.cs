@@ -4,68 +4,106 @@ namespace Content;
 
 public class World {
     public Point Size;
-    public List<Tile> Data = new();
+    public List<Tile> TilesData = new();
+    public List<Entity> EntitiesData = new();
     public Camera Cam; 
 
     private Random rnd = new();
 
-    public World() {
-        Size = new Point(100, 100);
+    public World(Point Size) {
+        this.Size = Size;
 
-        for(int x = 0; x < Size.X; x++) {
-            for(int y = 0; y < Size.Y; y++) {
-                var tile = MakeTile(new Point(x, y));
-                if (tile != null)
-                    Data.Add(tile);
+        // make ground
+        for(int y = 0; y < Size.Y; y++) {
+            for(int x = 0; x < Size.X; x++) {
+                Tile? tile;
+                if (y > (Size.Y/2)) {
+                    tile = MakeTile(new Point(x, y), TileId.Stone);
+                } else if (y == (Size.Y/2)) {
+                    tile = MakeTile(new Point(x, y), TileId.Dirt);
+                } else {
+                    tile = MakeTile(new Point(x, y));
+                }
+                if (tile != null) {
+                    TilesData.Add(tile);
+                }
             }
         }
+        // make prefabs
+        int amounts = 3;
+        int xoffset = Size.X/amounts;
+        for(int i = 0; i < amounts; i++) {
+            GeneratePrefab(Resource.HousePrefab, new Point(xoffset * (i+1), Size.Y/2-Resource.HousePrefab.Length));
+        }
 
-        Cam = new Camera();
-        Cam.Position = new Point((Size.X*Resource.TileSize.X)/2, (Size.Y*Resource.TileSize.Y)/2);
+        Cam = new Camera(new Point((Size.X*Resource.TileSize.X)/2, (Size.Y*Resource.TileSize.Y)/2));
     }
 
-    private Tile? MakeTile(Point pos) {
+    private Tile? MakeTile(Point pos, TileId tileid = TileId.Air) {
         // gen tile
         var canRandom = rnd.Next(200);
         // make tile
         if (canRandom <= 0) {
                 // gen texture
-                var blockSprite = Resource.CornerTileLeft;
-                Texture tex;
-                var sTex = "";
-                for(int y = 0; y < blockSprite.Length; y++) {
-                    for(int x = 0; x < blockSprite[0].Length; x++) {
-                        sTex = sTex + blockSprite[y][x]; 
-                    }
-                }
-                tex = new Texture(blockSprite.Length, blockSprite[0].Length, sTex);
+                Texture tex = MakeTexture(Resource.CornerTileLeft);
 
                 tex.SetColor(ConsoleColor.Red);
                 return new Tile(TileId.Stone, TileType.CornerLeft, tex, pos, Resource.TileSize);
         } else {
             // gen texture
-            var blockSprite = Resource.BlockTile;
-            Texture tex;
-            var sTex = "";
-            for(int y = 0; y < blockSprite.Length; y++) {
-                for(int x = 0; x < blockSprite[0].Length; x++) {
-                    sTex = sTex + blockSprite[y][x]; 
-                }
-            }
-            tex = new Texture(blockSprite.Length, blockSprite[0].Length, sTex);
+            Texture tex = MakeTexture(Resource.BlockTile);
 
-            if (pos.Y <= (Size.Y - (Size.Y/3))) {
-                tex.SetColor(ConsoleColor.Black, ConsoleColor.Black);
-                return new Tile(TileId.Air, TileType.Block, tex, pos, Resource.TileSize);
-            } else if (pos.Y >= (Size.Y - (Size.Y/3)) && pos.Y < (Size.Y/3)) {
-                tex.SetColor(ConsoleColor.Green);
-                return new Tile(TileId.Dirt, TileType.Block, tex, pos, Resource.TileSize);
-            } else {
-                tex.SetColor(ConsoleColor.Gray, ConsoleColor.Gray);
-                return new Tile(TileId.Stone, TileType.Block, tex, pos, Resource.TileSize);
+            switch (tileid)
+            {
+                case TileId.Air:
+                    tex.SetColor(ConsoleColor.Black, ConsoleColor.Black);
+                    return new Tile(TileId.Air, TileType.Block, tex, pos, Resource.TileSize);
+                
+                case TileId.Stone:
+                    tex.SetColor(ConsoleColor.Gray, ConsoleColor.Gray);
+                    return new Tile(TileId.Stone, TileType.Block, tex, pos, Resource.TileSize);
+
+                case TileId.Dirt:
+                    tex.SetColor(ConsoleColor.DarkGreen, ConsoleColor.DarkGreen);
+                    return new Tile(TileId.Dirt, TileType.Block, tex, pos, Resource.TileSize);
+
+                default:
+                break;
             }
         }
         return null;
+    }
+
+    public void GeneratePrefab(string[] prefab, Point pos) {
+        var pWidth = prefab[0].Length;
+        var pHeight = prefab.Length;
+
+        for(int y = 0; y < pHeight; y++) {
+            for(int x = 0; x < pWidth; x++) {
+                var charp = prefab[y][x];
+                if (charp != '.') {
+                    var tile = GetTile(new Point(pos.X + x, pos.Y + y));
+                    tile.Id = TileId.Stone;
+                    tile.Sprite.SetColor(ConsoleColor.DarkRed);
+                } 
+            }
+        }
+    }
+
+    public Texture MakeTexture(string[] textSprite) {
+        var blockSprite = textSprite;
+        Texture tex;
+        var sTex = "";
+
+        for(int y = 0; y < blockSprite.Length; y++) {
+            for(int x = 0; x < blockSprite[0].Length; x++) {
+                sTex = sTex + blockSprite[y][x]; 
+            }
+        }
+
+        tex = new Texture(blockSprite.Length, blockSprite[0].Length, sTex);
+
+        return tex;
     }
 
     public void Draw() {
@@ -78,11 +116,11 @@ public class World {
             Math.Clamp((int)Math.Floor(localCamPosY) - (localSize.Y/2), localSize.Y, (this.Size.Y-1)-(localSize.Y)) - 1
         );
 
-        for (int x = 0; x < localSize.X+2; x+=1) {
-            for (int y = 0; y < localSize.Y+1; y+=1) {
+        for (int y = 0; y < localSize.Y+1; y+=1) {
+            for (int x = 0; x < localSize.X+2; x+=1) {
                 var pos = new Point(startPos.X+x, startPos.Y+y);
                 var tile = GetTile(pos);
-                if (tile == null) {
+                if (tile == null || tile.Id == TileId.Air) {
                     continue;
                 }
 
@@ -92,32 +130,47 @@ public class World {
             }
         }
 
-        if (Input.GetKeyDown(ConsoleKey.S))
-            Cam.Position.Y += 1;
-        else if (Input.GetKeyDown(ConsoleKey.W))
-            Cam.Position.Y -= 1;
-        
-        if (Input.GetKeyDown(ConsoleKey.A))
-            Cam.Position.X -= 1;
-        else if (Input.GetKeyDown(ConsoleKey.D))
-            Cam.Position.X += 1;
+        // Draw camera
+        var cumtex = MakeTexture(Resource.CameraTexture);
+        Screen.SetTexture(Screen.WindowSize.Y/2-cumtex.Height/2, Screen.WindowSize.X/2-cumtex.Width/2, MakeTexture(Resource.CameraTexture));
+    }
 
-        
+    public void Update() {
+        MovePlayer();
+        MoveCamera();
+    }
+
+    public void MoveCamera() {
+        if (Cam.Attached == null) {
+            if (Input.GetKeyDown(Resource.MOVE_DOWN))
+                Cam.Position.Y += 1;
+            else if (Input.GetKeyDown(Resource.MOVE_UP))
+                Cam.Position.Y -= 1;
+
+            if (Input.GetKeyDown(Resource.MOVE_LEFT))
+                Cam.Position.X -= 1;
+            else if (Input.GetKeyDown(Resource.MOVE_RIGHT))
+                Cam.Position.X += 1;
+        }
+    }
+
+    public void MovePlayer() {
+        // todo:
     }
 
     public Point GetCamDimension() {
         return new Point(Screen.WindowSize.X/Resource.TileSize.X, Screen.WindowSize.Y/Resource.TileSize.Y);
     }
 
-    public Tile? GetTile(Point pos) {
-        //foreach (var item in Data) {
+    public Tile GetTile(Point pos) {
+        //foreach (var item in TilesData) {
         //    if (item.Position == pos) {
         //        return item;
         //    }
         //}
         //return null;
         Screen.SetText(0,0,pos.X.ToString()+":"+pos.Y.ToString());
-        return Data[Utility.GetPosition(Size.X, pos.Y, pos.X)];
+        return TilesData[Utility.GetPosition(Size.X, pos.Y, pos.X)];
     }
 
 

@@ -3,7 +3,7 @@ using Engine;
 namespace Content;
 
 public class Player : Entity {
-    public Player(Point Position, Vector Velocity): base(Position, Velocity) {
+    public Player(Point Position, Point Size, Vector Velocity): base(Position, Size, Velocity) {
 
     }
 }

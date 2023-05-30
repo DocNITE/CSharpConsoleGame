@@ -9,10 +9,11 @@ public class Game : Application
     }
 
     public override void Initialize() {
-        GameWorld = new World();
+        GameWorld = new World(Resource.WORLD_SIZE);
     }
 
     public override void Process() {
+        GameWorld.Update();
         GameWorld.Draw();
     }
 }
